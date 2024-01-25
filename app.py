@@ -1,89 +1,86 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-#df=pd.read_csv("file.csv")
-st.title("blabla")
-
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import streamlit as st
+from matplotlib.lines import Line2D
 
-df=pd.read_csv(r"C:\Users\agata\Desktop\Komunikacja wizualna\file.csv")
+st.title("Online Shopping Data")
+
+df = pd.read_csv(r"C:\Users\agata\Desktop\Komunikacja wizualna\file.csv")
+df = df.replace("F","Female")
+df = df.replace("M","Male")
 df = df[df['CustomerID'].notna()]
 df2 = df.drop_duplicates(subset=["CustomerID"])
-cities=df2["Location"].value_counts().index.tolist()
-location=df2["Location"].value_counts()
+cities = df2["Location"].value_counts().index.tolist()
+location = df2["Location"].value_counts()
 
-miasto = df[df['Location']==cities[0]]
-kob=miasto[miasto["Gender"]=="F"]
-mez=miasto[miasto["Gender"]=="M"]
-miasto2 = df[df['Location']==cities[1]]
-kob2=miasto2[miasto2["Gender"]=="F"]
-mez2=miasto2[miasto2["Gender"]=="M"]
-miasto3= df[df['Location']==cities[2]]
-kob3=miasto3[miasto3["Gender"]=="F"]
-mez3=miasto3[miasto3["Gender"]=="M"]
-miasto4 = df[df['Location']==cities[3]]
-kob4=miasto4[miasto4["Gender"]=="F"]
-mez4=miasto4[miasto4["Gender"]=="M"]
-miasto5 = df[df['Location']==cities[4]]
-kob5=miasto5[miasto5["Gender"]=="F"]
-mez5=miasto5[miasto5["Gender"]=="M"]
+data_by_gender_and_city = []
+
+for city in cities:
+    miasto = df[df['Location'] == city]
+    data_by_gender = []
+
+    for gender in ["Female", "Male"]:
+        gender_data = miasto[miasto["Gender"] == gender]
+        data_by_gender.append({
+            "Gender": gender,
+            "Average_Tenure_Months": np.mean(gender_data["Tenure_Months"]),
+            "Average_Online_Spend": np.mean(gender_data["Online_Spend"]),
+            "Count": len(gender_data),
+            "City": city
+        })
+
+    data_by_gender_and_city.extend(data_by_gender)
 
 
 
+# Opcje dla płci
+selected_gender = st.multiselect(label='Select gender', options=["Female", "Male"], default=["Female", "Male"])
 
+# Opcje dla miast
+selected_city = st.multiselect(label='Select city', options=cities, default=cities)
 
-# Przykładowe dane (możesz dostosować do swoich danych)
-sredni_czas = [np.mean(kob["Tenure_Months"]),np.mean(mez["Tenure_Months"]),np.mean(kob2["Tenure_Months"]),np.mean(mez2["Tenure_Months"]),np.mean(kob3["Tenure_Months"]),np.mean(mez3["Tenure_Months"]),np.mean(kob4["Tenure_Months"]),np.mean(mez4["Tenure_Months"]),np.mean(kob5["Tenure_Months"]),np.mean(mez5["Tenure_Months"])]
-srednia_kwota = [np.mean(kob["Online_Spend"]),np.mean(mez["Online_Spend"]),np.mean(kob2["Online_Spend"]),np.mean(mez2["Online_Spend"]),np.mean(kob3["Online_Spend"]),np.mean(mez3["Online_Spend"]),np.mean(kob4["Online_Spend"]),np.mean(mez4["Online_Spend"]),np.mean(kob5["Online_Spend"]),np.mean(mez5["Online_Spend"])]
-plec = ["Female","Male","Female","Male","Female","Male","Female","Male","Female","Male"]
-liczba_ludzi = [len(kob),len(mez),len(kob2),len(mez2),len(kob3),len(mez3),len(kob4),len(mez4),len(kob5),len(mez5)]
-miasto = [cities[0],cities[0],cities[1],cities[1],cities[2],cities[2],cities[3],cities[3],cities[4],cities[4]]
+# Dodaj slidery do interakcji
+x_axis_limit = st.slider('Set x-axis limit', min_value=14, max_value=40, value=(23,31))
+y_axis_limit = st.slider('Set y-axis limit', min_value=1350, max_value=2500, value=(1700,2150))
+# Filtruj dane na podstawie wybranych opcji
+filtered_data = [entry for entry in data_by_gender_and_city if entry["Gender"] in selected_gender and entry["City"] in selected_city]
 
 # Mapowanie kolorów na płeć
 colors_plec = {'Male': 'royalblue', 'Female': 'hotpink'}
-plec_colors = [colors_plec[p] for p in plec]
+plec_colors = [colors_plec[p] for p in [entry["Gender"] for entry in filtered_data]]
 
 # Mapowanie kolorów obramowania na miasto
 colors_miasto = {cities[0]: 'red', cities[1]: 'limegreen', cities[2]: 'dimgray', cities[3]: 'orange', cities[4]: 'purple'}
-miasto_colors = [colors_miasto[m] for m in miasto]
+miasto_colors = [colors_miasto[m] for m in [entry["City"] for entry in filtered_data]]
 
 # Dostosowanie rozmiarów bąbelków do skali wykresu
-rozmiary = [liczba/7 for liczba in liczba_ludzi]
+rozmiary = [entry["Count"] / 7 for entry in filtered_data]
 
-# Stworzenie wykresu bąbelkowego
-scatter = plt.scatter(sredni_czas, srednia_kwota, s=rozmiary, c=plec_colors, edgecolors=miasto_colors,  linewidths=3)
+# Tworzenie interaktywnego wykresu
+fig, ax = plt.subplots()
+scatter = ax.scatter([entry["Average_Tenure_Months"] for entry in filtered_data],
+                    [entry["Average_Online_Spend"] for entry in filtered_data],
+                    s=rozmiary, c=plec_colors, edgecolors=miasto_colors, linewidths=3)
 
 # Dodanie pustych okręgów przy płciach w legendzie
-legenda_plec = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors_plec[p], markersize=10, label=p) for p in colors_plec]
+legend_elements_plec = [Line2D([0], [0], marker='o', color='w', markerfacecolor=colors_plec[p], markersize=10, label=p) for p in set(colors_plec)]
 
 # Dodanie pustych okręgów przy miastach w legendzie
-legenda_miasto = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='white', markeredgecolor=colors_miasto[m], markersize=10, label=m) for m in colors_miasto]
+legend_elements_miasto = [Line2D([0], [0], marker='o', color='w', markerfacecolor='white', markeredgecolor=colors_miasto[m], markersize=10, label=m) for m in set(colors_miasto)]
 
-plt.legend(handles=[*legenda_plec, *legenda_miasto], title='Legenda', loc='upper right')
+# Umieszczenie legendy w jednym miejscu
+ax.legend(handles=legend_elements_plec + legend_elements_miasto, title='Legend', loc='upper right')
 
-# Dodanie etykiet osi
-plt.xlabel('Average number of months the customers have been\nassociated with the platform [months]')
-plt.ylabel('Average amount spent online by the customers [$]')
-plt.title('Bubble Chart')
+ax.set_xlabel('Average number of months the customers have been\nassociated with the platform [months]', labelpad=10)
+ax.set_ylabel('Average amount spent online by the customers [$]', labelpad=10)
 
-# Wyświetlenie wykresu
-plt.show()
+# Dodaj interaktywność do wykresu
 
-fig1, ax1 = plt.subplots()
-ax1.scatter(sredni_czas, srednia_kwota, s=rozmiary, c=plec_colors, edgecolors=miasto_colors,  linewidths=3)
-ax1.legend(handles=[*legenda_plec, *legenda_miasto], title='Legend', loc='upper right')
-ax1.set_xlabel('Average number of months the customers have been\nassociated with the platform [months]',labelpad=10)
-ax1.set_ylabel('Average amount spent online by the customers [$]',labelpad=10)
 
-#ax1.axis('equal')  # wykres kołowy
-#st.pyplot(fig1)
-#cities[:0]=["Whole USA"]
-options = st.multiselect(label='What are data are you interested in?',options=[cities[0],cities[1],cities[2],cities[3],cities[4],"Female","Male"],default=[cities[0],cities[1],cities[2],cities[3],cities[4],"Female","Male"])
-st.write(options)  
+# Zaktualizuj limity osi
+ax.set_xlim([x_axis_limit[0], x_axis_limit[1]])
+ax.set_ylim([y_axis_limit[0], y_axis_limit[1]])
 
-if len(options) == 1:
-    if cities[0] in options:
-        st.pyplot(fig1)
+
+st.pyplot(fig)
