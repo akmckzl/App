@@ -6,7 +6,7 @@ from matplotlib.lines import Line2D
 
 st.title("Online Shopping Data")
 
-df = pd.read_csv(r"C:\Users\agata\Desktop\Komunikacja wizualna\file.csv")
+df = pd.read_csv(r"file.csv")
 df = df.replace("F","Female")
 df = df.replace("M","Male")
 df = df[df['CustomerID'].notna()]
